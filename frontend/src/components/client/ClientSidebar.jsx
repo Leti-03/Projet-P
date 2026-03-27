@@ -40,7 +40,7 @@ export default function ClientSidebar() {
         padding:'14px 0', animation:'sbIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both',
       }}>
         {/* Logo AT */}
-        <div onClick={() => navigate('/client')} style={{
+        <div onClick={() => navigate('/client/dashboard')} style={{
           width:38, height:38, borderRadius:10, overflow:'hidden',
           cursor:'pointer', marginBottom:10, flexShrink:0,
           transition:'transform 0.2s', border:'1px solid #E8E8E8',
