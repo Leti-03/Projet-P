@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';   // ← doit correspondre
 import ClientReclamation from './pages/client/Reclamation';
 import SuiviReclamation from './pages/client/SuiviReclamation';
 import Historique from './pages/client/Historique';
+// import Welcome from "./pages/welcome.jsx";
 
 export default function App() {
   return (

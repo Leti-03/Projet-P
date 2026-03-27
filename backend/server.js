@@ -5,11 +5,12 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 
 
-import clientsRoutes       from './routes/clients.routes.js';
+import clientsRoutes       from './routes/Clients.routes.js';
 
 import reclamationsRoutes  from './routes/reclamations.routes.js';
 
 import performancesRoutes  from './routes/performances.routes.js';
+import assignationRoutes from './routes/assignation.routes.js';
 
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/clients',       clientsRoutes);
 
 app.use('/api/reclamations',  reclamationsRoutes);
 app.use('/api/performances',  performancesRoutes);
+app.use('/api/assignation', assignationRoutes);
 
 // ── Socket.IO ──
 io.on('connection', (socket) => {
