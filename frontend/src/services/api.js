@@ -51,6 +51,13 @@ export const performancesAPI = {
   technicien: (id) => api.get(`/performances/techniciens/${id}`),
 };
 
-
+// Intercepteur pour ajouter le token JWT à chaque requête automatiquement
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export default api;

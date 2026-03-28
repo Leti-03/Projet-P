@@ -1,38 +1,193 @@
-.App {
-  text-align: center;
+/* ============================================================
+   DESIGN SYSTEM & RESPONSIVE GLOBAL - AT CRM (M2 ISI)
+   "Pixel Perfect" basé sur tes captures d'écran
+   ============================================================ */
+
+/* Import indispensable de Poppins pour le design moderne */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+:root {
+  /* 1. PALETTE DE COULEURS */
+  --at-green: #4CAF50;          /* Vert boutons/succès */
+  --at-green-dark: #388E3C;
+  --at-green-light: #E8F5E9;    /* Fonds doux icônes */
+  
+  --at-orange: #FF9800;         /* Pour factures/DA */
+  
+  --at-bg: #F8FAFB;             /* Gris très clair du fond */
+  --at-white: #FFFFFF;
+  --at-border: #F0F2F4;         /* Bordures très discrètes */
+  --at-text-main: #1A202C;      /* Anthracite doux */
+  --at-text-sub: #718096;       /* Gris sous-titres */
+  
+  /* Statuts Zoho-style */
+  --status-urgent-bg: #FFEBEE;   --status-urgent-text: #D32F2F;
+  --status-pending-bg: #FFF3E0;  --status-pending-text: #EF6C00;
+  --status-success-bg: #E8F5E9;  --status-success-text: #2E7D32;
+
+  /* 2. TYPOGRAPHIE & ÉCHELLE */
+  --fs-h1: 32px;
+  --fs-h2: 20px;
+  --fs-body: 15px;
+  --fs-small: 12px;
+
+  /* 3. COURBES D'ANIMATION PREMIUM */
+  --at-ease-premium: cubic-bezier(0.19, 1, 0.22, 1);
+  --at-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  
+  /* Largeur Sidebar Desktop */
+  --sidebar-width: 90px;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* ============================================================
+   4. STYLES GLOBAUX & RESET
+   ============================================================ */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--at-bg);
+  font-family: 'Poppins', sans-serif; /* Police des photos */
+  color: var(--at-text-main);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* ============================================================
+   5. STRUCTURE DU LAYOUT RESPONSIVE
+   ============================================================ */
+.layout-wrapper {
   display: flex;
-  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Sidebar qui flotte sur Desktop */
+.sidebar-aside {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  z-index: 1000;
+  position: fixed;
+  height: calc(100vh - 32px); /* Laisse une marge top/bottom */
+  left: 16px;
+  top: 16px;
+  background: var(--at-white);
+  border-radius: 24px; /* Arrondi généreux */
+  border: 1px solid var(--at-border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03); /* Ombre légère */
+  transition: all 0.4s var(--at-ease-premium);
+}
+
+.main-content {
+  flex-grow: 1;
+  width: 100%;
+  margin-left: 110px; /* sidebar (90) + margin (16) + gap */
+  padding: 40px 60px;
+  transition: all 0.4s var(--at-ease-premium);
+}
+
+/* ============================================================
+   6. COMPOSANTS GÉNÉRIQUES (Zoho-Style)
+   ============================================================ */
+
+/* La Grille Auto-adaptive */
+.at-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  width: 100%;
+}
+
+/* La Carte Premium */
+.at-card {
+  background: var(--at-white);
+  border-radius: 24px;
+  border: 1px solid var(--at-border);
+  padding: 24px;
+  box-shadow: 0 2px 15px rgba(0,0,0,0.01); /* Ombre ultra-discrète */
+  transition: all 0.4s var(--at-ease-premium);
+}
+
+.at-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.05);
+}
+
+/* Titres & Sous-titres */
+.at-title { font-size: var(--fs-h1); font-weight: 700; color: #1A202C; margin: 0; }
+.at-subtitle { font-size: 15px; color: var(--at-text-sub); margin-top: 4px; }
+
+/* Bouton Vert (Bouton d'Assistant Image 1, Créer un ticket Image 2) */
+.at-btn-green {
+  background: var(--at-green);
+  color: white;
+  border: none;
+  border-radius: 12px; /* Arrondi Zoho */
+  padding: 14px 24px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  gap: 10px;
+  width: 100%;
+  transition: filter 0.2s;
 }
 
-.App-link {
-  color: #61dafb;
+.at-btn-green:hover {
+  filter: brightness(0.95);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Badges de Statut (Urgent, En cours, Ouvert) */
+.at-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+.badge-urgent { background: var(--status-urgent-bg); color: var(--status-urgent-text); }
+.badge-success { background: var(--status-success-bg); color: var(--status-success-text); }
+.badge-pending { background: var(--status-pending-bg); color: var(--status-pending-text); }
+
+/* Animation d'entrée */
+.animate-page {
+  animation: slideInUp 0.8s var(--at-ease-premium) forwards;
+}
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   7. LE "MAGIC FIX" RESPONSIVE (TRANSFORMATION EN TAB BAR BASSE)
+   ============================================================ */
+@media (max-width: 768px) {
+  /* 1. On replace la sidebar en bas (Barre de navigation mobile) */
+  .sidebar-aside {
+    width: 100% !important;
+    height: 75px !important;
+    bottom: 0 !important;
+    top: auto !important;
+    left: 0 !important;
+    border-right: none;
+    border-top: 1px solid var(--at-border);
+    border-radius: 24px 24px 0 0;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: 0 -5px 25px rgba(0,0,0,0.06);
   }
-  to {
-    transform: rotate(360deg);
+
+  /* 2. On annule la marge à gauche pour le contenu */
+  .main-content {
+    margin-left: 0 !important;
+    padding: 20px;
+    padding-bottom: 100px; /* Espace pour pas que la barre cache le contenu */
   }
+
+  .at-title { font-size: 22px; }
+  .at-grid { grid-template-columns: 1fr !important; gap: 16px; }
+  .at-card { padding: 18px; border-radius: 20px; }
 }
