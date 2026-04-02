@@ -1,232 +1,263 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUser, FaMapMarkerAlt, FaExclamationTriangle, FaPhoneAlt, FaChevronDown, FaPhone } from "react-icons/fa";
-import { BiBookContent } from "react-icons/bi";
-import ClientSidebar from '../../components/client/ClientSidebar';
-import InputField from '../../components/InputField';
-import ConfirmationSoumission from '../../components/client/ConfirmationSoumission';
+import {
+  User, MapPin, Phone, BookOpen,
+  ChevronLeft, FileText, Wrench, Globe, Send, X, Activity, Check, Clock
+} from 'lucide-react';
+import ClientLayoutFixed from '../../layouts/clientLayoutFixed';
+import ClientTopNav from '../../components/client/ClientTopNav';
 import { reclamationsAPI } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
+import TypeModal from '../../components/client/reclamationTypeModal';
+import { MdSignalWifiStatusbarConnectedNoInternet3 } from 'react-icons/md';
+import axios from 'axios';
 
-const TYPES = [
-  { value: 'connexion', label: 'Problème de connexion' },
-  { value: 'facturation', label: 'Erreur de facturation' },
-  { value: 'equipement', label: 'Équipement défectueux' },
-  { value: 'service', label: 'Service indisponible' },
-];
+const API = 'http://localhost:5000';
 
-// Configuration des animations pour les éléments de liste
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.3 }
-  }
+const ICON_MAP = {
+  internet:    <MdSignalWifiStatusbarConnectedNoInternet3 size={28} />,
+  telephonie:  <Phone size={28} />,
+  fttx:        <Activity size={28} />,
+  equipement:  <Wrench size={28} />,
+  facturation: <FileText size={28} />,
+  service:     <Globe size={28} />,
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, x: 20 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" } }
+const COLOR_FIXED = '#061a2e';
+
+const STATUS_CONFIG = {
+  en_attente: { label: 'En attente', bg: '#FFF3E0', color: '#E65100' },
+  en_cours:   { label: 'En cours',   bg: '#E3F2FD', color: '#1565C0' },
+  resolue:    { label: 'Résolue',    bg: '#E8F5E9', color: '#2E7D32' },
+  fermee:     { label: 'Fermée',     bg: '#F3F4F6', color: '#6B7280' },
 };
 
-export default function ClientReclamation({ clientId }) {
-  const [form, setForm] = useState({ nom: '', prenom: '', telephone: '', adresse: '', type_probleme: '', description: '' });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [typeOpen, setTypeOpen] = useState(false);
-  const [error, setError] = useState('');
+const StatusBadge = ({ statut }) => {
+  const cfg = STATUS_CONFIG[statut] || { label: statut, bg: '#F3F4F6', color: '#6B7280' };
+  return (
+    <span style={{
+      background: cfg.bg, color: cfg.color,
+      padding: '3px 10px', borderRadius: 999,
+      fontSize: 11, fontWeight: 700,
+      fontFamily: 'Poppins, sans-serif',
+      whiteSpace: 'nowrap',
+    }}>
+      {cfg.label}
+    </span>
+  );
+};
 
-  const set = (name, value) => {
-    setForm(f => ({ ...f, [name]: value }));
-    if (error) setError('');
+export default function ClientReclamation() {
+  const { client } = useAuth();
+
+  // ── Catégories dynamiques ─────────────────────────────────────────────────
+  const [categories,  setCategories]  = useState([]);
+  const [loadingCats, setLoadingCats] = useState(true);
+
+  useEffect(() => {
+    axios.get(`${API}/api/categories-reclamation`)
+      .then(res => setCategories(res.data.map(cat => ({
+        ...cat,
+        icon:  ICON_MAP[cat.iconKey] || <Globe size={28} />,
+        color: COLOR_FIXED,
+      }))))
+      .catch(() => setCategories([]))
+      .finally(() => setLoadingCats(false));
+  }, []);
+
+  // ── Réclamations ──────────────────────────────────────────────────────────
+  const [reclamations, setReclamations] = useState([]);
+  const [loadingRec,   setLoadingRec]   = useState(true);
+
+  const fetchReclamations = async () => {
+    if (!client?.id) return;
+    try {
+      const res = await reclamationsAPI.getAll({ client_id: client.id });
+      const liste = res?.data?.data || [];
+      setReclamations(liste.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+    } catch { setReclamations([]); }
+    finally { setLoadingRec(false); }
   };
 
+  useEffect(() => { fetchReclamations(); }, [client?.id]);
+
+  // ── Formulaire ────────────────────────────────────────────────────────────
+  const [modalCat,      setModalCat]      = useState(null);
+  const [selectedCat,   setSelectedCat]   = useState(null);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [form, setForm] = useState({
+    nom: client?.nom || '', prenom: client?.prenom || '',
+    telephone: client?.telephone || '', adresse: client?.adresse || '',
+    description: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error,   setError]   = useState('');
+
+  const setField           = (n, v) => { setForm(f => ({ ...f, [n]: v })); if (error) setError(''); };
+  const handleCatClick     = (cat)   => setModalCat(cat);
+  const handleModalConfirm = (types) => { setSelectedCat(modalCat); setSelectedTypes(types); setModalCat(null); };
+  const handleModalClose   = ()      => setModalCat(null);
+  const handleBack         = ()      => { setSelectedCat(null); setSelectedTypes([]); };
+
   const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!form.nom || !form.prenom || !form.telephone || !form.adresse || !form.type_probleme || !form.description) {
-      setError('Veuillez remplir tous les champs avant de soumettre.');
+    e.preventDefault();
+    if (!form.description || form.description.length < 10) {
+      setError('Veuillez décrire votre problème (minimum 10 caractères).');
       return;
     }
     setLoading(true);
     try {
       await reclamationsAPI.create({
-        client_id: clientId || '6bdcc9ba-523d-4141-b551-307e5f29aaa5',
-        titre: `${form.type_probleme} — ${form.nom}`,
-        description: `Tel: ${form.telephone} | ${form.description}`,
-        type_probleme: form.type_probleme,
+        client_id:        client?.id,
+        titre:            selectedCat.label.toUpperCase(),
+        description:      `Types: ${selectedTypes.join(', ')} | Contact: ${form.prenom} ${form.nom} | Tel: ${form.telephone} | Obs: ${form.description}`,
+        type_probleme:    selectedTypes.join(' / '),
         adresse_probleme: form.adresse,
       });
       setSuccess(true);
-      setForm({ nom: '', prenom: '', telephone: '', adresse: '', type_probleme: '', description: '' });
-    } catch (err) { 
-      setError("Une erreur est survenue.");
-    } finally { 
-      setLoading(false); 
-    }
+      setForm(prev => ({ ...prev, description: '' }));
+      setSelectedCat(null); setSelectedTypes([]);
+      await fetchReclamations();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur réseau. Veuillez réessayer plus tard.');
+    } finally { setLoading(false); }
   };
 
-  const selectedType = TYPES.find(t => t.value === form.type_probleme);
-
   return (
-    <div style={styles.pageBackground}>
-      <ClientSidebar />
-      <ConfirmationSoumission isVisible={success} onClose={() => setSuccess(false)} />
+    // ✅ ClientLayoutFixed : main-content-fixed = height 100vh, overflow hidden
+    // Complètement isolé du ClientLayout normal utilisé par les autres pages
+    <ClientLayoutFixed>
+      <TypeModal category={modalCat} onConfirm={handleModalConfirm} onClose={handleModalClose} />
 
-      <div style={styles.mainContent}>
-        <div style={styles.topNav}>
-          <button type="button" style={styles.navBtn}>✉️</button>
-          <button type="button" style={styles.navBtn}>🔔</button>
-          <div style={styles.userAvatar}>JD</div>
-        </div>
+      <div style={{
+        height: '109%',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '42px 24px',
+        boxSizing: 'border-box',
+      }}>
+        <div style={{ width: '100%', maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-        <div style={styles.cardWrapper}>
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            style={styles.authCard}
-          >
-            {/* PANNEAU GAUCHE */}
-            <div style={styles.leftPanel}>
-              <div style={styles.decoCircle1} />
-              <div style={styles.decoCircle2} />
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                style={{ zIndex: 2 }}
-              >
-                <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
-                  <h1 style={styles.leftTitle}>RÉCLAMATION</h1>
-                  <div style={styles.divider} />
-                  <p style={styles.leftSub}>Assistance technique officielle<br/>Algérie Télécom.</p>
-                </motion.div>
+          <ClientTopNav
+            title={selectedCat ? 'Détails du problème' : 'Nouvelle Réclamation'}
+            subtitle={selectedCat ? `Catégorie : ${selectedCat.label}` : 'Sélectionnez une catégorie pour signaler un incident'}
+          />
 
-                <div style={{ marginTop: 40 }}>
-                  <p style={styles.assistTitle}>ASSISTANCE DIRECTE</p>
-                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-                    <button type="button" style={styles.callBtn}><FaPhoneAlt size={10}/> 12</button>
-                    <button type="button" style={styles.callBtn}><FaPhoneAlt size={10}/> 101</button>
-                  </div>
-                </div>
+          <AnimatePresence>
+            {success && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                style={{ background: '#EAF3DE', border: '1px solid #C0DD97', borderRadius: 10, padding: '10px 16px', color: '#3B6D11', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                ✓ Réclamation envoyée avec succès.
+                <button onClick={() => setSuccess(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#3B6D11' }}>
+                  <X size={16} />
+                </button>
               </motion.div>
-            </div>
+            )}
+          </AnimatePresence>
 
-            {/* PANNEAU DROIT ANIMÉ */}
-            <div style={styles.rightPanel}>
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                style={styles.formGrid}
-              >
-                <motion.div variants={itemVariants} style={styles.rightHeader}>
-                  <h1 style={styles.formTitle}>Nouvelle Demande</h1>
-                  <p style={styles.formSubTitle}>Tous les champs sont obligatoires.</p>
-                </motion.div>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <AnimatePresence mode="wait">
 
-                <AnimatePresence>
-                  {error && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0 }} style={styles.errorBanner}>
-                      ⚠️ {error}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              {!selectedCat && (
+                <motion.div key="grid" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
+                  style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                  <motion.div variants={itemVariants} style={styles.row5050}>
-                    <InputField icon={<FaUser />} placeholder="Nom" value={form.nom} onChange={e => set('nom', e.target.value)} />
-                    <InputField icon={<FaUser />} placeholder="Prénom" value={form.prenom} onChange={e => set('prenom', e.target.value)} />
-                  </motion.div>
-                  
-                  <motion.div variants={itemVariants} style={{ position: 'relative' }}>
-                    <div style={styles.customInputLine} onClick={() => setTypeOpen(!typeOpen)}>
-                      <FaExclamationTriangle style={styles.inputIcon} />
-                      <div style={styles.selectText}>
-                        <span style={{ color: selectedType ? '#1e293b' : '#a0aec0' }}>
-                          {selectedType ? selectedType.label : 'Nature du problème'}
-                        </span>
-                        <FaChevronDown size={12} color="#a0aec0" />
-                      </div>
-                    </div>
-                    {typeOpen && (
-                      <div style={styles.dropdown}>
-                        {TYPES.map(t => (
-                          <div key={t.value} style={styles.dropItem} onClick={() => { set('type_probleme', t.value); setTypeOpen(false); }}>
-                            {t.label}
+                  <div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#455061', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+                      Nouvelle réclamation — choisissez une catégorie
+                    </p>
+                    {loadingCats ? (
+                      <div style={{ textAlign: 'center', padding: '30px', color: '#94a3b8', fontSize: 13 }}>Chargement des catégories...</div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                        {categories.map((cat) => (
+                          <div key={cat.id} className="category-card" style={{ cursor: 'pointer', padding: '14px 12px' }} onClick={() => handleCatClick(cat)}>
+                            <div style={{ color: cat.color, background: cat.bg, borderRadius: 12, padding: 10, display: 'inline-flex' }}>{cat.icon}</div>
+                            <h3 className="ds-service-label" style={{ marginTop: 10, fontSize: 12 }}>{cat.label}</h3>
+                            <p className="reclamation-form-sub" style={{ fontSize: 10, margin: 0 }}>{cat.desc}</p>
                           </div>
                         ))}
                       </div>
                     )}
-                  </motion.div>
+                  </div>
 
-                  <motion.div variants={itemVariants}>
-                    <InputField icon={<FaPhone />} placeholder="Numéro de téléphone" value={form.telephone} onChange={e => set('telephone', e.target.value)} />
-                  </motion.div>
+                  {!loadingRec && reclamations.length > 0 && (
+                    <div style={{ flexShrink: 0 }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: '#455061', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+                        Mes réclamations récentes
+                      </p>
+                      <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'thin', scrollbarColor: '#CBD5E1 transparent' }}>
+                        {reclamations.map((rec) => (
+                          <div key={rec.id} style={{ minWidth: 260, flexShrink: 0, background: 'white', borderRadius: 14, border: '1px solid #F0F2F4', padding: '12px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', fontFamily: 'Poppins, sans-serif' }}>{rec.titre}</span>
+                              <StatusBadge statut={rec.statut} />
+                            </div>
+                            {rec.type_probleme && <span style={{ fontSize: 11, color: '#64748B' }}>{rec.type_probleme}</span>}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#94A3B8' }}>
+                              <Clock size={11} />
+                              {new Date(rec.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
 
-                  <motion.div variants={itemVariants}>
-                    <InputField icon={<FaMapMarkerAlt />} placeholder="Adresse de l'incident" value={form.adresse} onChange={e => set('adresse', e.target.value)} />
-                  </motion.div>
+              {selectedCat && (
+                <motion.div key="form" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20, height: '100%' }}>
 
-                  <motion.div variants={itemVariants} style={styles.descContainer}>
-                    <BiBookContent style={styles.descIcon} />
-                    <textarea 
-                      placeholder="Description détaillée du problème..." 
-                      value={form.description}
-                      onChange={e => set('description', e.target.value)}
-                      style={styles.textArea}
-                    />
-                  </motion.div>
+                  <div className="at-card reclamation-left" style={{ background: '#F8FAFB', padding: '20px 16px', overflow: 'hidden' }}>
+                    <div style={{ color: selectedCat.color, background: selectedCat.bg, borderRadius: 12, padding: 10, display: 'inline-flex', marginBottom: 10 }}>{selectedCat.icon}</div>
+                    <h2 className="reclamation-form-title" style={{ color: selectedCat.color, fontSize: 15, margin: '0 0 6px' }}>{selectedCat.label}</h2>
+                    <p className="reclamation-form-sub" style={{ textAlign: 'center', marginBottom: 10, fontSize: 12 }}>Incident lié à {selectedCat.label.toLowerCase()}.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, width: '100%', marginBottom: 4 }}>
+                      {selectedTypes.map((t) => (
+                        <div key={t} style={{ background: `${selectedCat.color}12`, border: `1px solid ${selectedCat.color}40`, borderRadius: 6, padding: '4px 8px', fontSize: 10, color: selectedCat.color, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Check size={10} /> {t}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="reclamation-left-divider" style={{ marginTop: 12 }}>
+                      <p className="reclamation-left-assist-title">Aide immédiate</p>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                        <button className="reclamation-call-btn"><Phone size={12} /> 12</button>
+                        <button className="reclamation-call-btn"><Phone size={12} /> 100</button>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <button onClick={() => setModalCat(selectedCat)} style={{ background: 'none', border: `1px solid ${selectedCat.color}`, color: selectedCat.color, borderRadius: 8, padding: '6px 12px', fontSize: 11, cursor: 'pointer' }}>Modifier les types</button>
+                      <button onClick={handleBack} style={{ border: 'none', background: 'transparent', color: '#718096', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}><ChevronLeft size={14} /> Retour</button>
+                    </div>
+                  </div>
 
-                  <motion.button 
-                    variants={itemVariants}
-                    whileHover={{ scale: 1.01, backgroundColor: '#16a34a' }}
-                    whileTap={{ scale: 0.99 }}
-                    type="submit" 
-                    style={{...styles.submitButton, opacity: loading ? 0.7 : 1}} 
-                    disabled={loading}
-                  >
-                    {loading ? 'ENVOI EN COURS...' : 'SOUMETTRE LA RÉCLAMATION'}
-                  </motion.button>
-                </form>
-              </motion.div>
-            </div>
-          </motion.div>
+                  <div className="at-card" style={{ padding: '24px 28px', overflow: 'hidden' }}>
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      {error && <div className="reclamation-error" style={{ fontSize: 12, padding: '8px 12px' }}>{error}</div>}
+                      <div className="reclamation-input-row">
+                        <div className="reclamation-input-line"><User size={16} color="#CBD5E1" /><input placeholder="Nom" value={form.nom} onChange={e => setField('nom', e.target.value)} required /></div>
+                        <div className="reclamation-input-line"><User size={16} color="#CBD5E1" /><input placeholder="Prénom" value={form.prenom} onChange={e => setField('prenom', e.target.value)} required /></div>
+                      </div>
+                      <div className="reclamation-input-line"><Phone size={16} color="#CBD5E1" /><input placeholder="Téléphone" value={form.telephone} onChange={e => setField('telephone', e.target.value)} required /></div>
+                      <div className="reclamation-input-line"><MapPin size={16} color="#CBD5E1" /><input placeholder="Adresse d'installation" value={form.adresse} onChange={e => setField('adresse', e.target.value)} required /></div>
+                      <div className="reclamation-input-line" style={{ alignItems: 'flex-start' }}><BookOpen size={16} color="#CBD5E1" style={{ marginTop: 5 }} /><textarea placeholder="Décrivez votre problème..." value={form.description} onChange={e => setField('description', e.target.value)} required style={{ height: 60 }} /></div>
+                      <button type="submit" disabled={loading} className="reclamation-submit" style={{ background: selectedCat.color }}>
+                        {loading ? 'ENVOI EN COURS...' : <><Send size={14} /> ENVOYER LA RÉCLAMATION</>}
+                      </button>
+                    </form>
+                  </div>
+                </motion.div>
+              )}
+
+            </AnimatePresence>
+          </div>
         </div>
       </div>
-    </div>
+    </ClientLayoutFixed>
   );
 }
-
-const styles = {
-  pageBackground: { height: '100vh', width: '100vw', background: '#F8FAFC', display: 'flex', overflow: 'hidden', position: 'fixed', top: 0, left: 0, fontFamily: "'Poppins', sans-serif" },
-  mainContent: { flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 40px', marginLeft: '80px', height: '100vh', overflow: 'hidden' },
-  topNav: { display: 'flex', alignSelf: 'flex-end', alignItems: 'center', gap: 20, marginBottom: '5px' },
-  navBtn: { background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#64748b' },
-  userAvatar: { width: 35, height: 35, borderRadius: '10px', background: '#1e293b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '12px' },
-  cardWrapper: { display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: '30px' },
-  authCard: { display: 'flex', width: '100%', maxWidth: '1000px', background: '#fff', borderRadius: '30px', boxShadow: '0 24px 80px rgba(0,0,0,0.06)', overflow: 'hidden', maxHeight: '92vh' },
-  leftPanel: { width: '32%', background: '#f8fafc', padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRight: '1px solid #f1f5f9' },
-  decoCircle1: { position: "absolute", top: -70, right: -70, width: 200, height: 240, borderRadius: "50%", background: "rgba(34, 197, 94, 0.04)", pointerEvents: "none" },
-  decoCircle2: { position: "absolute", bottom: -50, left: -50, width: 150, height: 150, borderRadius: "50%", background: "rgba(0,112,184,0.03)", pointerEvents: "none" },
-  rightPanel: { width: '68%', padding: '30px 60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' },
-  leftTitle: { fontSize: 26, fontWeight: 800, color: '#1e293b', margin: 0, letterSpacing: '1px', textAlign: 'center' },
-  divider: { width: 35, height: 4, background: '#22C55E', margin: '12px auto', borderRadius: 10 },
-  leftSub: { fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 1.5 },
-  assistTitle: { fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 15, textAlign: 'center', letterSpacing: '1px' },
-  callBtn: { background: '#fff', border: '1.5px solid #e2e8f0', padding: '10px 20px', borderRadius: 12, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Poppins', sans-serif" },
-  rightHeader: { marginBottom: 20 },
-  formTitle: { fontSize: 22, fontWeight: 700, color: '#1e293b', margin: 0 },
-  formSubTitle: { fontSize: 13, color: '#94a3b8', marginTop: 3 },
-  formGrid: { display: 'flex', flexDirection: 'column', gap: '15px' }, 
-  row5050: { display: 'flex', gap: '20px' },
-  customInputLine: { display: 'flex', alignItems: 'center', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', gap: 15, cursor: 'pointer' },
-  selectText: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 1, fontSize: 14 },
-  inputIcon: { color: '#cbd5e1', fontSize: 16 },
-  dropdown: { position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', borderRadius: 12, boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 10, marginTop: 5, border: '1px solid #f1f5f9' },
-  dropItem: { padding: '10px 15px', fontSize: 13, cursor: 'pointer' },
-  descContainer: { display: 'flex', alignItems: 'flex-start', borderBottom: '2px solid #f1f5f9', paddingBottom: '5px', gap: 15 },
-  descIcon: { color: '#cbd5e1', fontSize: 18, marginTop: '5px' },
-  textArea: { flex: 1, border: 'none', outline: 'none', fontSize: 14, background: 'transparent', height: '60px', resize: 'none', color: '#1e293b', fontFamily: "'Poppins', sans-serif" },
-  submitButton: { padding: '16px', marginTop: '10px', background: '#22C55E', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: 14, cursor: 'pointer', boxShadow: '0 10px 20px rgba(34, 197, 94, 0.2)', fontFamily: "'Poppins', sans-serif" },
-  errorBanner: { background: '#FEF2F2', color: '#DC2626', padding: '12px', borderRadius: '10px', marginBottom: '15px', border: '1px solid #FECACA', fontSize: '13px', fontWeight: 500 },
-};

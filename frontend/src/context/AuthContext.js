@@ -1,79 +1,97 @@
-// src/context/AuthContext.jsx
-import { createContext, useState, useEffect, useCallback } from "react";
-import { apiLogin, apiRegister } from "../services/authClient";
+import { createContext, useState, useEffect, useCallback, useContext } from "react";
+// 1. IMPORTATION MANQUANTE ICI :
+import authClientAPI, { apiLogin, apiRegister } from "../services/authClient";
 
 export const AuthContext = createContext(null);
 
-const CLIENT_KEY = "at_client"; // clé localStorage
+// --- AJOUT DU HOOK useAuth POUR CORRIGER L'ERREUR ---
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth doit être utilisé à l'intérieur d'un AuthProvider");
+  }
+  return context;
+};
+
+const CLIENT_KEY = "at_client";
+const TOKEN_KEY = "at_token"; // Clé pour le JWT
 
 export const AuthProvider = ({ children }) => {
-  const [client, setClient] = useState(null);       // données du client connecté
-  const [loading, setLoading] = useState(true);      // chargement initial
+  const [client, setClient] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // ── Rehydrate depuis localStorage au montage ──────────────────────────────────
+  // Vérifier la session au chargement
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CLIENT_KEY);
-      if (stored) setClient(JSON.parse(stored));
-    } catch {
-      localStorage.removeItem(CLIENT_KEY);
-    } finally {
-      setLoading(false);
+    const storedClient = localStorage.getItem(CLIENT_KEY);
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+
+    if (storedClient && storedToken) {
+      try {
+        setClient(JSON.parse(storedClient));
+        // On remet le token dans les headers axios par défaut
+        authClientAPI.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      } catch {
+        localStorage.removeItem(CLIENT_KEY);
+        localStorage.removeItem(TOKEN_KEY);
+      }
     }
+    setLoading(false);
   }, []);
 
-  // ── Persiste le client dans localStorage à chaque changement ─────────────────
-  useEffect(() => {
-    if (client) {
-      localStorage.setItem(CLIENT_KEY, JSON.stringify(client));
-    } else {
-      localStorage.removeItem(CLIENT_KEY);
-    }
-  }, [client]);
-
-  // ── LOGIN ─────────────────────────────────────────────────────────────────────
-  // Le backend attend : { email_ou_telephone, mot_de_passe }
-  // On accepte aussi { email, password } venant du formulaire Login
-  const login = useCallback(async ({ email, password, email_ou_telephone, mot_de_passe }) => {
-    const payload = {
-      email_ou_telephone: email_ou_telephone || email,
-      mot_de_passe: mot_de_passe || password,
+  // --- LOGIN ---
+  const login = useCallback(async ({ email, password }) => {
+    // On envoie un payload simple (ce que ton backend reçoit déjà)
+    const payload = { 
+      email: email.toLowerCase().trim(), 
+      password 
     };
+
     const data = await apiLogin(payload);
-    // data = { message, client: { id, nom, prenom, email, ... } }
-    setClient(data.client);
+
+    if (data && data.token) {
+      // 1. Mise à jour de l'état
+      setClient(data.client);
+      
+      // 2. Stockage local
+      localStorage.setItem(CLIENT_KEY, JSON.stringify(data.client));
+      localStorage.setItem(TOKEN_KEY, data.token);
+
+      // 3. Configuration d'Axios pour les prochaines requêtes (Réclamations, etc.)
+      authClientAPI.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+    }
     return data;
   }, []);
 
-  // ── REGISTER ──────────────────────────────────────────────────────────────────
-  // Le backend attend : { nom, prenom, email, telephone, mot_de_passe, confirm_mot_de_passe }
-  // On adapte depuis le formulaire Register qui envoie { username, email, password, passwordConfirm }
-  const register = useCallback(async ({ username, email, password, passwordConfirm, telephone = "" }) => {
-    // Découpe username en nom / prenom (si un seul mot → nom = username, prenom = "")
-    const parts = username.trim().split(" ");
-    const nom = parts[0];
-    const prenom = parts.slice(1).join(" ") || nom;
-
-    const payload = {
-      nom,
-      prenom,
-      email,
-      telephone,
-      mot_de_passe: password,
-      confirm_mot_de_passe: passwordConfirm,
-    };
-    const data = await apiRegister(payload);
-    // Ne pas connecter l'utilisateur ici — il doit d'abord vérifier l'OTP
-    return data; // { message, client_id, email }
-  }, []);
-
-  // ── LOGOUT ────────────────────────────────────────────────────────────────────
+  // --- LOGOUT ---
   const logout = useCallback(() => {
     setClient(null);
+    localStorage.removeItem(CLIENT_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    delete authClientAPI.defaults.headers.common['Authorization'];
+  }, []);
+
+  // --- REGISTER ---
+  const register = useCallback(async (formData) => {
+    const parts = formData.username.trim().split(/\s+/);
+    const firstName = parts[0] || "Client";
+    const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "Inconnu";
+
+    const payload = {
+      nom: lastName,
+      prenom: firstName,
+      email: formData.email.toLowerCase().trim(),
+      telephone: formData.telephone || "0000000000",
+      mot_de_passe: formData.password,
+      confirm_mot_de_passe: formData.passwordConfirm,
+      date_naissance: null,
+      carte_identite_url: ""
+    };
+
+    return await apiRegister(payload);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ client, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ client, user: client, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

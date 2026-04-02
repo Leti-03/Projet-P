@@ -1,0 +1,47 @@
+import { PERMISSIONS as P } from './permissions';
+
+/**
+ * Configuration des permissions par défaut pour chaque profil.
+ * Utilisé pour l'initialisation et la vérification des droits.
+ */
+export const DEFAULT_ROLES = {
+  ADMIN: [
+    ...Object.values(P) // L'admin a TOUTES les permissions
+  ],
+
+  RESPONSABLE: [
+    P.CLIENTS_READ, P.CLIENTS_UPDATE,
+    P.FACTURES_READ, P.FACTURES_EXPORT,
+    P.RECLAMATIONS_READ, P.RECLAMATIONS_UPDATE,
+    P.INTERVENTIONS_READ,
+    P.OFFRES_READ,
+    P.STATS_VIEW, P.STATS_FINANCIAL
+  ],
+
+  COMMERCIAL: [
+    P.CLIENTS_READ, P.CLIENTS_CREATE, P.CLIENTS_UPDATE,
+    P.FACTURES_READ, P.FACTURES_CREATE, P.FACTURES_UPDATE,
+    P.OFFRES_READ, P.OFFRES_CREATE, P.OFFRES_UPDATE,
+    P.RECLAMATIONS_READ // Peut voir mais pas traiter
+  ],
+
+  TECHNICIEN: [
+    P.CLIENTS_READ, // Lecture seule
+    P.RECLAMATIONS_READ, P.RECLAMATIONS_UPDATE, P.RECLAMATIONS_CREATE,
+    P.INTERVENTIONS_READ, P.INTERVENTIONS_CREATE, P.INTERVENTIONS_UPDATE
+  ],
+
+  COMPTABLE: [
+    P.CLIENTS_READ,
+    P.FACTURES_READ, P.FACTURES_CREATE, P.FACTURES_UPDATE, P.FACTURES_EXPORT,
+    P.STATS_FINANCIAL
+  ],
+
+  STAGIAIRE: [
+    P.CLIENTS_READ,
+    P.RECLAMATIONS_READ,
+    P.OFFRES_READ
+  ]
+};
+
+export default DEFAULT_ROLES;
