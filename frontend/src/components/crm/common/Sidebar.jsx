@@ -3,25 +3,28 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, MessageSquare, FileText,
   Wrench, Percent, BarChart3, Settings, LogOut,
-  UserCog, Shield, SlidersHorizontal, ChevronDown, ChevronUp, Activity
+  UserCog, Shield, SlidersHorizontal, ChevronDown, ChevronUp, Activity,
+  UserPlus, ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../../../context/crm/AuthContext.jsx';
 
 const menuItems = [
-  { label: 'Dashboard',   path: '/crm/dashboard',     icon: LayoutDashboard },
-  { label: 'Clients',     path: '/crm/clients',        icon: Users },
-  { label: 'Tickets',     path: '/crm/reclamations',   icon: MessageSquare },
-  { label: 'Facturation', path: '/crm/factures',       icon: FileText },
-  { label: 'Intervent.',  path: '/crm/interventions',  icon: Wrench },
-  { label: 'Offres',      path: '/crm/offres',         icon: Percent },
-  { label: 'Stats',       path: '/crm/statistiques',   icon: BarChart3 },
+  { label: 'Dashboard',    path: '/crm/dashboard',       icon: LayoutDashboard },
+  { label: 'Clients',      path: '/crm/clients',          icon: Users },
+  { label: 'Tickets',      path: '/crm/reclamations',     icon: MessageSquare },
+  { label: 'Assigner',     path: '/crm/assignation',      icon: UserPlus },
+  { label: 'Facturation',  path: '/crm/factures',         icon: FileText },
+  { label: 'Demandes',     path: '/crm/demandes',         icon: ClipboardList },
+  { label: 'Intervent.',   path: '/crm/interventions',    icon: Wrench },
+  { label: 'Offres',       path: '/crm/offres',           icon: Percent },
+  { label: 'Stats',        path: '/crm/statistiques',     icon: BarChart3 },
 ];
 
 const adminItems = [
-  { label: 'Employés',   path: '/crm/administration/employes',   icon: UserCog },
-  { label: 'Profils',    path: '/crm/administration/profils',    icon: Shield },
-  { label: 'Logs',       path: '/crm/administration/logs',       icon: Activity }, // ← ajoute
-  { label: 'Paramètres', path: '/crm/administration/parametres', icon: SlidersHorizontal },
+  { label: 'Employés',    path: '/crm/administration/employes',   icon: UserCog },
+  { label: 'Profils',     path: '/crm/administration/profils',    icon: Shield },
+  { label: 'Logs',        path: '/crm/administration/logs',       icon: Activity },
+  { label: 'Paramètres',  path: '/crm/administration/parametres', icon: SlidersHorizontal },
 ];
 
 export default function Sidebar() {
@@ -52,10 +55,16 @@ export default function Sidebar() {
   // ── Mobile ──
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'row', height: '70px', width: '100%', alignItems: 'center', justifyContent: 'space-around', padding: '0 10px', backgroundColor: 'white', borderTop: '1px solid #F0F2F4', boxSizing: 'border-box' }}>
+      <div style={{
+        display: 'flex', flexDirection: 'row', height: '70px', width: '100%',
+        alignItems: 'center', justifyContent: 'space-around', padding: '0 10px',
+        backgroundColor: 'white', borderTop: '1px solid #F0F2F4', boxSizing: 'border-box'
+      }}>
         {menuItems.map((item, i) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive = item.path === '/crm/demandes'
+            ? location.pathname.startsWith('/crm/demandes')
+            : location.pathname === item.path;
           return (
             <button key={i} onClick={() => navigate(item.path)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: isActive ? '#4CAF50' : '#1A1A1A' }}>
               <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
@@ -73,21 +82,28 @@ export default function Sidebar() {
 
   // ── Desktop ──
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', alignItems: 'center', padding: '15px 0', backgroundColor: 'white', borderRight: '1px solid #F0F2F4', boxSizing: 'border-box', overflow: 'hidden' }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column', height: '100vh', width: '100%',
+      alignItems: 'center', padding: '15px 0', backgroundColor: 'white',
+      borderRight: '1px solid #F0F2F4', boxSizing: 'border-box', overflow: 'hidden'
+    }}>
 
       {/* Logo */}
       <div style={{ marginBottom: '2vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div style={{ fontSize: '22px', fontWeight: '900', display: 'flex' }}>A<span style={{ color: '#4CAF50' }}>T</span></div>
+        <div style={{ fontSize: '22px', fontWeight: '900', display: 'flex' }}>
+          A<span style={{ color: '#4CAF50' }}>T</span>
+        </div>
         <div style={{ width: '20px', height: '3px', background: '#4CAF50', borderRadius: '2px' }} />
       </div>
 
       {/* Menu */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', gap: '6px', overflowY: 'auto' }}>
 
-        {/* Items normaux */}
         {menuItems.map((item, i) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive = item.path === '/crm/demandes'
+            ? location.pathname.startsWith('/crm/demandes')
+            : location.pathname === item.path;
           return (
             <button key={i} onClick={() => navigate(item.path)} style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0', color: isActive ? '#4CAF50' : '#1A1A1A' }}>
               <div style={{ width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', background: isActive ? '#E8F5E9' : 'transparent' }}>
@@ -101,10 +117,8 @@ export default function Sidebar() {
         {/* Section Admin — superadmin seulement */}
         {isAdmin && (
           <>
-            {/* Séparateur */}
             <div style={{ width: '32px', height: '1px', background: '#E0E0E0', margin: '4px 0' }} />
 
-            {/* Bouton Admin accordion */}
             <button
               onClick={() => setAdminOpen(!adminOpen)}
               style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0', color: isAdminPage ? '#4CAF50' : '#1A1A1A' }}
@@ -118,7 +132,6 @@ export default function Sidebar() {
               <span style={{ fontSize: '10px', fontWeight: isAdminPage ? '700' : '500', marginTop: '2px' }}>Admin</span>
             </button>
 
-            {/* Sous-menu accordion */}
             {adminOpen && (
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', backgroundColor: '#F8F9FA', borderRadius: '8px', padding: '6px 0' }}>
                 {adminItems.map((item, i) => {
@@ -146,6 +159,7 @@ export default function Sidebar() {
         <LogOut size={18} />
         <span style={{ fontSize: '10px', fontWeight: '600' }}>Logout</span>
       </button>
+
     </div>
   );
 }

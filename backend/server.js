@@ -4,21 +4,21 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
-// Routes portail client
-import clientsRoutes      from './routes/Clients.routes.js';
-import reclamationsRoutes from './routes/Reclamations.routes.js';
-import performancesRoutes from './routes/performances.routes.js';
+// ── Routes portail client ──────────────────────────────────────────────────────
+import clientsRoutes       from './routes/client/Clients.routes.js';
+import reclamationsRoutes  from './routes/reclamations.routes.js';
+import performancesRoutes  from './routes/performances.routes.js';
+import assignationRoutes   from './routes/assignation.routes.js';
+import offresRoutes        from './routes/Offres.routes.js';
+import demandeServiceRoutes from './routes/client/demandeService.route.js';
+import categoriesRoutes    from './routes/client/categoriesReclamations.routes.js';
 
-// Routes CRM interne
+// ── Routes CRM interne ────────────────────────────────────────────────────────
 import crmAuthRoutes          from './routes/crm/auth.routes.js';
 import crmUsersRoutes         from './routes/crm/users.routes.js';
 import crmRolesRoutes         from './routes/crm/roles.routes.js';
 import crmLogsRoutes          from './routes/crm/logs.routes.js';
 import crmNotificationsRoutes from './routes/crm/notifications.routes.js';
-
-// Routes avec fichiers vides - TEMPORAIREMENT COMMENTÉES
-// import crmTechniciensRoutes   from './routes/crm/techniciens.routes.js';
-// import crmInterventionsRoutes from './routes/crm/interventions.routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -37,23 +37,23 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.set('io', io);
 
-// ── Routes portail client ──
-app.use('/api/clients',      clientsRoutes);
-app.use('/api/reclamations', reclamationsRoutes);
-app.use('/api/performances', performancesRoutes);
+// ── Routes portail client ──────────────────────────────────────────────────────
+app.use('/api/clients',                clientsRoutes);
+app.use('/api/reclamations',           reclamationsRoutes);
+app.use('/api/performances',           performancesRoutes);
+app.use('/api/assignation',            assignationRoutes);
+app.use('/api/offres',                 offresRoutes);
+app.use('/api/demandes-service',       demandeServiceRoutes);
+app.use('/api/categories-reclamation', categoriesRoutes);
 
-// ── Routes CRM interne ──
+// ── Routes CRM interne ────────────────────────────────────────────────────────
 app.use('/api/crm/auth',          crmAuthRoutes);
 app.use('/api/crm/users',         crmUsersRoutes);
 app.use('/api/crm/roles',         crmRolesRoutes);
 app.use('/api/crm/logs',          crmLogsRoutes);
 app.use('/api/crm/notifications', crmNotificationsRoutes);
 
-// Routes temporairement désactivées (fichiers vides)
-// app.use('/api/crm/techniciens',   crmTechniciensRoutes);
-// app.use('/api/crm/interventions', crmInterventionsRoutes);
-
-// ── Socket.IO ──
+// ── Socket.IO ─────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
   socket.on('join_user',        (userId)        => socket.join(`user_${userId}`));
   socket.on('join_tech',        (techId)        => socket.join(`tech_${techId}`));
@@ -61,10 +61,10 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {});
 });
 
-// ── Santé ──
+// ── Santé ─────────────────────────────────────────────────────────────────────
 app.get('/api/health', (_, res) => res.json({ status: 'OK', timestamp: new Date() }));
 
-// ── Erreurs globales ──
+// ── Erreurs globales ──────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Erreur serveur', details: err.message });
