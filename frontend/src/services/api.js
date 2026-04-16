@@ -25,6 +25,8 @@ api.interceptors.response.use(
 
 
 
+
+
 export const clientsAPI = {
   getAll:    (params)   => api.get('/clients', { params }),
   getById:   (id)       => api.get(`/clients/${id}`),

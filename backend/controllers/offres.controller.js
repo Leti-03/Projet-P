@@ -1,60 +1,111 @@
 import { supabaseAdmin } from '../config/supabase.js';
+// 1. CORRECTION : Ajout du 'l' manquant à Email et vérification du chemin
+import { sendOffreCibleeEmail } from '../utils/emailService.js'; 
 
+// Récupérer toutes les offres (pour le CRM)
 export const getOffres = async (req, res) => {
-  const { cible, type, budget, actif = 'true' } = req.query;
-  let query = supabaseAdmin.from('offres').select('*').eq('actif', actif === 'true').order('prix', { ascending: true });
-  if (type)   query = query.eq('type', type);
-  if (budget) query = query.lte('prix', Number(budget));
-  if (cible)  query = query.or(`cible.eq.${cible},cible.eq.tous`);
-  const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('offres')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
-export const getOffreById = async (req, res) => {
-  const { data, error } = await supabaseAdmin.from('offres').select('*').eq('id', req.params.id).single();
-  if (error) return res.status(404).json({ error: 'Offre non trouvée' });
-  res.json(data);
-};
-
+// Créer une nouvelle offre
 export const createOffre = async (req, res) => {
-  const { nom, description, prix, debit_download, debit_upload, quota_data, type, cible } = req.body;
-  if (!nom || !prix || !type) return res.status(400).json({ error: 'nom, prix et type sont obligatoires' });
+  try {
+    const { nom, prix, debit, type_offre, cible_status } = req.body;
 
-  const TYPES = ['fibre', 'adsl', 'mobile', '4g', '5g'];
-  if (!TYPES.includes(type)) return res.status(400).json({ error: `type invalide. Valeurs : ${TYPES.join(', ')}` });
+    // 1. Insertion de l'offre
+    const { data: nouvelleOffre, error } = await supabaseAdmin
+      .from('offres')
+      .insert([{ 
+        nom, 
+        prix: parseFloat(prix), 
+        debit_internet: debit, 
+        type_offre: type_offre || 'tous',
+        cible_status: cible_status || [],
+        actif: true 
+      }])
+      .select()
+      .single();
 
-  if (cible && cible !== 'tous') {
-    const { data: profilExistant } = await supabaseAdmin.from('profils').select('nom').eq('nom', cible).maybeSingle();
-    if (!profilExistant) {
-      const { data: profils } = await supabaseAdmin.from('profils').select('nom');
-      return res.status(400).json({ error: `Profil "${cible}" inexistant.`, profils_disponibles: profils?.map(p => p.nom) });
+    if (error) throw error;
+
+    // 2. LOGIQUE D'ENVOI D'EMAIL
+    if (cible_status && cible_status.length > 0) {
+      const { data: clients, error: errClients } = await supabaseAdmin
+        .from('clients')
+        .select('id, email, prenom, profil_segment');
+
+      if (!errClients && clients) {
+        const clientsCibles = clients.filter(client => {
+          const segment = client.profil_segment || {};
+          return cible_status.some(tag => segment[tag.toLowerCase()] === true);
+        });
+
+        console.log(`🎯 Offre créée. Envoi d'emails à ${clientsCibles.length} clients.`);
+
+        // 2. CORRECTION : Appel du bon nom de fonction 'sendOffreCibleeEmail'
+        const envois = clientsCibles.map(client => 
+          sendOffreCibleeEmail(client.email, client.prenom, nouvelleOffre)
+        );
+
+        await Promise.allSettled(envois);
+      }
     }
-  }
 
-  const { data, error } = await supabaseAdmin.from('offres').insert({ nom, description, prix, debit_download, debit_upload, quota_data, type, cible: cible || 'tous', actif: true }).select().single();
-  if (error) return res.status(400).json({ error: error.message });
-  res.status(201).json(data);
+    res.status(201).json(nouvelleOffre);
+  } catch (err) {
+    console.error("Erreur Backend createOffre:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
-export const updateOffre = async (req, res) => {
-  const CHAMPS = ['nom', 'description', 'prix', 'debit_download', 'debit_upload', 'quota_data', 'type', 'cible', 'actif'];
-  const updates = {};
-  CHAMPS.forEach(c => { if (req.body[c] !== undefined) updates[c] = req.body[c]; });
-  if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'Aucun champ valide fourni' });
-  const { data, error } = await supabaseAdmin.from('offres').update(updates).eq('id', req.params.id).select().single();
-  if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
-};
+// GET /api/offres/client/:clientId
+export const getOffresPourClient = async (req, res) => {
+  const { clientId } = req.params;
 
-export const deleteOffre = async (req, res) => {
-  const { cible } = req.query;
-  if (cible) {
-    const { data, error } = await supabaseAdmin.from('offres').delete().eq('cible', cible).select();
-    if (error) return res.status(400).json({ error: error.message });
-    return res.json({ message: `${data.length} offre(s) supprimée(s)`, supprimees: data });
+  try {
+    const { data: client, error: clientErr } = await supabaseAdmin
+      .from('clients')
+      .select('categorie, profil_segment')
+      .eq('id', clientId)
+      .single();
+
+    if (clientErr || !client) return res.status(404).json({ error: "Client non trouvé" });
+
+    const { data: offres, error: offresErr } = await supabaseAdmin
+      .from('offres')
+      .select('*')
+      .eq('actif', true);
+
+    if (offresErr) throw offresErr;
+
+    const offresFiltrees = offres.filter(offre => {
+      const matchCategorie = (offre.type_offre === 'tous' || offre.type_offre === client.categorie);
+      if (!matchCategorie) return false;
+
+      if (!offre.cible_status || offre.cible_status.length === 0) return true;
+
+      const clientSegment = client.profil_segment || {};
+
+      const matchStatus = offre.cible_status.some(tag => {
+        const normalizedTag = tag.toLowerCase().trim();
+        return clientSegment[normalizedTag] === true;
+      });
+
+      return matchStatus;
+    });
+    
+    res.json(offresFiltrees);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  const { error } = await supabaseAdmin.from('offres').delete().eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ message: 'Offre supprimée' });
 };

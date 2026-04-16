@@ -1,37 +1,36 @@
-import React from 'react';
 import { Search, Bell, User } from 'lucide-react';
-// IMPORT CORRECT : Sans accolades car c'est un export par défaut
 import { useAuth } from '../../../context/crm/AuthContext.jsx';
 
 export default function Header() {
   const { user } = useAuth();
 
   return (
-    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-      {/* Barre de recherche */}
-      <div style={{ position: 'relative', width: '350px' }}>
-        <Search size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#A0AEC0' }} />
-        <input 
-          type="text" 
-          placeholder="Rechercher..." 
-          style={{ width: '100%', padding: '12px 12px 12px 45px', borderRadius: '12px', border: '1px solid var(--at-border)', outline: 'none', fontSize: '14px' }}
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '12px 24px', backgroundColor: 'white',
+      borderBottom: '1px solid #F0F2F4', height: '60px', boxSizing: 'border-box',
+    }}>
+      {/* Recherche */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F6FA', borderRadius: 10, padding: '8px 14px', width: 260 }}>
+        <Search size={16} color="#999" />
+        <input
+          placeholder="Rechercher..."
+          style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 13, color: '#333', width: '100%' }}
         />
       </div>
 
-      {/* Profil & Notifs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <Bell size={20} color="var(--at-text-sub)" style={{ cursor: 'pointer' }} />
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '5px 15px', background: 'white', borderRadius: '15px', border: '1px solid var(--at-border)' }}>
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ margin: 0, fontSize: '13px', fontWeight: '700' }}>{user?.name || 'Admin'}</p>
-            <p style={{ margin: 0, fontSize: '11px', color: 'var(--at-green)', fontWeight: '600' }}>{user?.role || 'Rôle'}</p>
+      {/* Droite */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <Bell size={20} color="#555" style={{ cursor: 'pointer' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E8F5E9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <User size={16} color="#4CAF50" />
           </div>
-          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--at-green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--at-green)' }}>
-            <User size={20} />
-          </div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>
+            {user?.prenom} {user?.nom}
+          </span>
         </div>
       </div>
-    </header>
+    </div>
   );
 }
