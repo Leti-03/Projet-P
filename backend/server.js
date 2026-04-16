@@ -55,7 +55,6 @@ app.use('/api/crm/logs',          crmLogsRoutes);
 app.use('/api/crm/notifications', crmNotificationsRoutes);
 app.use('/api/crm/factures', crmFacturesRoutes);
 
-
 // ── Socket.IO ─────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
   socket.on('join_user',        (userId)        => socket.join(`user_${userId}`));

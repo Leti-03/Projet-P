@@ -27,22 +27,22 @@ const fetchUrgentTicketsCount = async () => {
 };
 
 const menuItems = [
-  { label: 'Dashboard',   path: '/crm/dashboard',    icon: LayoutDashboard },
-  { label: 'Clients',     path: '/crm/clients',       icon: Users },
-  { label: 'Tickets',     path: '/crm/reclamations',  icon: MessageSquare, badge: true }, // ← badge activé
-  { label: 'Assigner',    path: '/crm/assignation',   icon: UserPlus },
-  { label: 'Facturation', path: '/crm/factures',      icon: FileText },
-  { label: 'Demandes',    path: '/crm/demandes',      icon: ClipboardList },
-  { label: 'Intervent.',  path: '/crm/interventions', icon: Wrench },
-  { label: 'Offres',      path: '/crm/offres',        icon: Percent },
-  { label: 'Stats',       path: '/crm/statistiques',  icon: BarChart3 },
+  { label: 'Dashboard',    path: '/crm/dashboard',       icon: LayoutDashboard },
+  { label: 'Clients',      path: '/crm/clients',          icon: Users },
+  { label: 'Tickets',      path: '/crm/reclamations',     icon: MessageSquare },
+  { label: 'Assigner',     path: '/crm/assignation',      icon: UserPlus },
+  { label: 'Facturation',  path: '/crm/factures',         icon: FileText },
+  { label: 'Demandes',     path: '/crm/demandes',         icon: ClipboardList },
+  { label: 'Intervent.',   path: '/crm/interventions',    icon: Wrench },
+  { label: 'Offres',       path: '/crm/offres',           icon: Percent },
+  { label: 'Stats',        path: '/crm/statistiques',     icon: BarChart3 },
 ];
 
 const adminItems = [
-  { label: 'Employés',   path: '/crm/administration/employes',   icon: UserCog },
-  { label: 'Profils',    path: '/crm/administration/profils',    icon: Shield },
-  { label: 'Logs',       path: '/crm/administration/logs',       icon: Activity },
-  { label: 'Paramètres', path: '/crm/administration/parametres', icon: SlidersHorizontal },
+  { label: 'Employés',    path: '/crm/administration/employes',   icon: UserCog },
+  { label: 'Profils',     path: '/crm/administration/profils',    icon: Shield },
+  { label: 'Logs',        path: '/crm/administration/logs',       icon: Activity },
+  { label: 'Paramètres',  path: '/crm/administration/parametres', icon: SlidersHorizontal },
 ];
 
 export default function Sidebar() {
@@ -289,6 +289,7 @@ export default function Sidebar() {
         <LogOut size={18} />
         <span style={{ fontSize: '10px', fontWeight: '600' }}>Logout</span>
       </button>
+
     </div>
   );
 }
