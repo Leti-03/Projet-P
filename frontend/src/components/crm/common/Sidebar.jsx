@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, MessageSquare, FileText,
   Wrench, Percent, BarChart3, Settings, LogOut,
   UserCog, Shield, SlidersHorizontal, ChevronDown, ChevronUp, Activity,
-  UserPlus, ClipboardList
+  UserPlus, ClipboardList, User
 } from 'lucide-react';
 import { useAuth } from '../../../context/crm/AuthContext.jsx';
 
@@ -28,14 +28,14 @@ const fetchUrgentTicketsCount = async () => {
 
 const menuItems = [
   { label: 'Dashboard',    path: '/crm/dashboard',       icon: LayoutDashboard },
-  { label: 'Clients',      path: '/crm/clients',          icon: Users },
-  { label: 'Tickets',      path: '/crm/reclamations',     icon: MessageSquare },
-  { label: 'Assigner',     path: '/crm/assignation',      icon: UserPlus },
-  { label: 'Facturation',  path: '/crm/factures',         icon: FileText },
-  { label: 'Demandes',     path: '/crm/demandes',         icon: ClipboardList },
-  { label: 'Intervent.',   path: '/crm/interventions',    icon: Wrench },
-  { label: 'Offres',       path: '/crm/offres',           icon: Percent },
-  { label: 'Stats',        path: '/crm/statistiques',     icon: BarChart3 },
+  { label: 'Clients',      path: '/crm/clients',          icon: Users, ressource: 'clients' },
+  { label: 'Tickets',      path: '/crm/reclamations',     icon: MessageSquare, ressource: 'reclamations' },
+  { label: 'Assigner',     path: '/crm/assignation',      icon: UserPlus, ressource: 'assignation' },
+  { label: 'Facturation',  path: '/crm/factures',         icon: FileText, ressource: 'factures' },
+  { label: 'Demandes',     path: '/crm/demandes',         icon: ClipboardList, ressource: 'demandes' },
+  { label: 'Intervent.',   path: '/crm/interventions',    icon: Wrench, ressource: 'interventions' },
+  { label: 'Offres',       path: '/crm/offres',           icon: Percent, ressource: 'offres' },
+  { label: 'Stats',        path: '/crm/statistiques',     icon: BarChart3, ressource: 'statistiques' },
 ];
 
 const adminItems = [
@@ -48,8 +48,13 @@ const adminItems = [
 export default function Sidebar() {
   const navigate   = useNavigate();
   const location   = useLocation();
-  const { logout, user } = useAuth();
+  const { logout, user, hasPermission } = useAuth();
   const [isMobile, setIsMobile]     = useState(window.innerWidth <= 768);
+
+  const visibleMenuItems = menuItems.filter(item => {
+    if (!item.ressource) return true; // Toujours visible (ex: Dashboard)
+    return hasPermission(item.ressource, 'lire');
+  });
   const [adminOpen, setAdminOpen]   = useState(location.pathname.startsWith('/crm/administration'));
   const [urgentCount, setUrgentCount] = useState(0);
 
@@ -128,7 +133,7 @@ export default function Sidebar() {
             50%       { box-shadow: 0 2px 12px rgba(239,68,68,0.7); }
           }
         `}</style>
-        {menuItems.map((item, i) => {
+        {visibleMenuItems.map((item, i) => {
           const Icon = item.icon;
           const isActive = item.path === '/crm/demandes'
             ? location.pathname.startsWith('/crm/demandes')
@@ -147,6 +152,12 @@ export default function Sidebar() {
             </button>
           );
         })}
+        <button
+          onClick={() => navigate('/crm/mon-profil')}
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: location.pathname === '/crm/mon-profil' ? '#4CAF50' : '#1A1A1A', position: 'relative' }}
+        >
+          <User size={20} strokeWidth={location.pathname === '/crm/mon-profil' ? 2.5 : 2} />
+        </button>
         {isAdmin && (
           <button
             onClick={() => navigate('/crm/administration/employes')}
@@ -174,7 +185,10 @@ export default function Sidebar() {
       `}</style>
 
       {/* Logo */}
-      <div style={{ marginBottom: '2vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div 
+        onClick={() => navigate('/crm/dashboard')}
+        style={{ marginBottom: '2vh', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+      >
         <div style={{ fontSize: '22px', fontWeight: '900', display: 'flex' }}>
           A<span style={{ color: '#4CAF50' }}>T</span>
         </div>
@@ -184,7 +198,7 @@ export default function Sidebar() {
       {/* Menu */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', gap: '6px', overflowY: 'auto' }}>
 
-        {menuItems.map((item, i) => {
+        {visibleMenuItems.map((item, i) => {
           const Icon = item.icon;
           const isActive = item.path === '/crm/demandes'
             ? location.pathname.startsWith('/crm/demandes')
@@ -276,18 +290,39 @@ export default function Sidebar() {
         )}
       </div>
 
+      {/* Profil */}
+      <button
+        onClick={() => navigate('/crm/mon-profil')}
+        style={{
+          marginTop: 'auto', paddingBottom: '10px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          color: location.pathname === '/crm/mon-profil' ? '#4CAF50' : '#1A1A1A', cursor: 'pointer',
+          background: 'none', border: 'none', width: '100%',
+        }}
+      >
+        <div style={{
+          width: '38px', height: '38px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: '10px',
+          background: location.pathname === '/crm/mon-profil' ? '#E8F5E9' : 'transparent',
+        }}>
+          <User size={22} strokeWidth={location.pathname === '/crm/mon-profil' ? 2.5 : 2} />
+        </div>
+        <span style={{ fontSize: '10px', fontWeight: location.pathname === '/crm/mon-profil' ? '700' : '500', marginTop: '2px' }}>Profil</span>
+      </button>
+
       {/* Logout */}
       <button
         onClick={handleLogout}
         style={{
-          marginTop: 'auto', paddingBottom: '10px',
+          paddingBottom: '10px',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           color: '#8B0000', cursor: 'pointer', opacity: 0.8,
           background: 'none', border: 'none', width: '100%',
         }}
       >
         <LogOut size={18} />
-        <span style={{ fontSize: '10px', fontWeight: '600' }}>Logout</span>
+        <span style={{ fontSize: '10px', fontWeight: '600', marginTop: '4px' }}>Logout</span>
       </button>
 
     </div>

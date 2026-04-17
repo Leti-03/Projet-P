@@ -1,5 +1,10 @@
 import api from './api.js';
 
+export const getOffres = async () => {
+  const { data } = await api.get('/offres');
+  return data;
+};
+
 export const getFactures = async (filters = {}) => {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { getUsers, createUser, toggleUserStatut, resetUserPassword } from '../../../services/crm/users.js';
 import { getRoles } from '../../../services/crm/roles.js';
 import { useAuth } from '../../../context/crm/AuthContext.jsx';
+import Layout from '../../../components/crm/common/Layout.jsx';
 
 const ROLE_PALETTE = [
   { bg: 'linear-gradient(135deg, #006837, #4CAF50)', text: 'white' },
@@ -171,7 +172,8 @@ export default function Employes() {
   );
 
   return (
-    <div style={s.page}>
+    <Layout>
+      <div style={s.page}>
       <style>{`
         @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes fadeIn  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -529,7 +531,8 @@ export default function Employes() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </Layout>
   );
 }
 

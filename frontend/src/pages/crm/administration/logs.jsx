@@ -1,6 +1,7 @@
 // src/pages/crm/administration/logs.jsx
 import { useState, useEffect, useRef } from 'react';
 import { getLogs } from '../../../services/crm/logs.js';
+import Layout from '../../../components/crm/common/Layout.jsx';
 
 const ACTIONS    = ['LOGIN', 'LOGOUT', 'CREATE', 'UPDATE', 'DELETE', 'RESET_PASSWORD'];
 const RESSOURCES = ['auth', 'clients', 'factures', 'reclamations', 'interventions', 'utilisateurs_internes', 'roles', 'roles_permissions'];
@@ -144,7 +145,8 @@ export default function Logs() {
   const activeFiltersCount  = Object.values(filters).filter(Boolean).length;
 
   return (
-    <div style={s.page}>
+    <Layout>
+      <div style={s.page}>
       <style>{`
         @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes fadeIn  { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -416,7 +418,8 @@ export default function Logs() {
           <span style={s.pageInfo}>Page <strong>{page}</strong> / {totalPages} — {total} logs</span>
         </div>
       )}
-    </div>
+      </div>
+    </Layout>
   );
 }
 

@@ -10,6 +10,7 @@ import ProtectedRoute         from './components/ProtectedRoute';
 // ── Providers CRM ─────────────────────────────────────────────────────────────
 import { AuthProvider as CRMAuthProvider }             from './context/crm/AuthContext.jsx';
 import { PermissionProvider as CRMPermissionProvider } from './context/crm/PermissionContext';
+import CRMProtectedRoute from './components/crm/ProtectedRoute.jsx';
 
 // ── Pages auth client ─────────────────────────────────────────────────────────
 import Welcome          from './pages/client/welcome.jsx';
@@ -50,6 +51,7 @@ import Employes    from './pages/crm/administration/Employes';
 import Permissions from './pages/crm/administration/Permissions';
 import Parametres  from './pages/crm/administration/Parametres';
 import Logs        from './pages/crm/administration/logs.jsx';
+import MonProfil   from './pages/crm/MonProfil.jsx';
 
 export default function App() {
   return (
@@ -89,25 +91,27 @@ export default function App() {
               <Routes>
                 <Route path="/login" element={<LoginCRM />} />
 
-                <Route path="/dashboard"     element={<CRMDashboard />} />
-                <Route path="/clients"       element={<Clients />} />
-                <Route path="/clients/:id"   element={<ClientDetail />} />
-                <Route path="/reclamations"  element={<Reclamations />} />
-                <Route path="/interventions" element={<Interventions />} />
-                <Route path="/offres"        element={<Offres />} />
-                <Route path="/statistiques"  element={<Statistiques />} />
-                <Route path="/assignation"   element={<Assignation />} />
-                <Route path="/factures"      element={<Factures />} />
+                <Route path="/dashboard"     element={<CRMProtectedRoute><CRMDashboard /></CRMProtectedRoute>} />
+                <Route path="/clients"       element={<CRMProtectedRoute><Clients /></CRMProtectedRoute>} />
+                <Route path="/clients/:id"   element={<CRMProtectedRoute><ClientDetail /></CRMProtectedRoute>} />
+                <Route path="/reclamations"  element={<CRMProtectedRoute><Reclamations /></CRMProtectedRoute>} />
+                <Route path="/interventions" element={<CRMProtectedRoute><Interventions /></CRMProtectedRoute>} />
+                <Route path="/offres"        element={<CRMProtectedRoute><Offres /></CRMProtectedRoute>} />
+                <Route path="/statistiques"  element={<CRMProtectedRoute><Statistiques /></CRMProtectedRoute>} />
+                <Route path="/assignation"   element={<CRMProtectedRoute><Assignation /></CRMProtectedRoute>} />
+                <Route path="/factures"      element={<CRMProtectedRoute><Factures /></CRMProtectedRoute>} />
 
-                <Route path="/demandes"                   element={<DemandesCategories />} />
-                <Route path="/demandes/:type_service"     element={<DemandesListe />} />
-                <Route path="/demandes/:type_service/:id" element={<DemandeDetail />} />
+                <Route path="/demandes"                   element={<CRMProtectedRoute><DemandesCategories /></CRMProtectedRoute>} />
+                <Route path="/demandes/:type_service"     element={<CRMProtectedRoute><DemandesListe /></CRMProtectedRoute>} />
+                <Route path="/demandes/:type_service/:id" element={<CRMProtectedRoute><DemandeDetail /></CRMProtectedRoute>} />
 
-                <Route path="/administration/profils"     element={<Profils />} />
-                <Route path="/administration/employes"    element={<Employes />} />
-                <Route path="/administration/permissions" element={<Permissions />} />
-                <Route path="/administration/parametres"  element={<Parametres />} />
-                <Route path="/administration/logs"        element={<Logs />} />
+                <Route path="/mon-profil"                 element={<CRMProtectedRoute><MonProfil /></CRMProtectedRoute>} />
+
+                <Route path="/administration/profils"     element={<CRMProtectedRoute><Profils /></CRMProtectedRoute>} />
+                <Route path="/administration/employes"    element={<CRMProtectedRoute><Employes /></CRMProtectedRoute>} />
+                <Route path="/administration/permissions" element={<CRMProtectedRoute><Permissions /></CRMProtectedRoute>} />
+                <Route path="/administration/parametres"  element={<CRMProtectedRoute><Parametres /></CRMProtectedRoute>} />
+                <Route path="/administration/logs"        element={<CRMProtectedRoute><Logs /></CRMProtectedRoute>} />
 
                 <Route path="*" element={<Navigate to="/crm/login" replace />} />
               </Routes>

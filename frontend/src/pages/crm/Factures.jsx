@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getFactures, createFacture, updateStatutFacture,
-  envoyerFacture, downloadPDF, searchClients,
+  envoyerFacture, downloadPDF, searchClients
 } from '../../services/crm/factures.js';
+import Layout from '../../components/crm/common/Layout.jsx';
 
 // ── Constantes ──────────────────────────────────────────────────────────────
 const STATUT_STYLE = {
@@ -59,7 +60,9 @@ function ClientSearch({ value, onChange }) {
 
   const handleInput = (val) => {
     setQuery(val);
-    if (!value) return; // si déjà sélectionné, effacer si on retape
+    if (value) {
+      onChange(null); // clear selection if user types again
+    }
     clearTimeout(timerRef.current);
     if (val.length < 2) { setResults([]); setOpen(false); return; }
     setLoading(true);
@@ -181,7 +184,11 @@ export default function Factures() {
   const [clientSel, setClientSel]   = useState(null);
   const [dates, setDates]           = useState({ date_echeance:'', periode_debut:'', periode_fin:'' });
   const [lignes, setLignes]         = useState([{ description:'', quantite:1, prix_unitaire:'' }]);
-
+  const [tva, setTva]               = useState(19);
+  const [numeroFacture, setNumeroFacture] = useState('');
+  const [statutFacture, setStatutFacture] = useState('impayee');
+  const [datePaiement, setDatePaiement]   = useState('');
+  
   const limit = 20;
 
   const showToast = (type, text) => {
@@ -207,7 +214,7 @@ export default function Factures() {
   const setLigne    = (i, k, v) => setLignes(l => { const n=[...l]; n[i]={...n[i],[k]:v}; return n; });
 
   const ht  = lignes.reduce((s,l) => s + (parseFloat(l.prix_unitaire)||0)*(parseFloat(l.quantite)||0), 0);
-  const ttc = ht * 1.19;
+  const ttc = ht * (1 + (parseFloat(tva)||0)/100);
   const totalPages = Math.ceil(total / limit);
 
   // KPIs page courante
@@ -226,12 +233,16 @@ export default function Factures() {
     if (!clientSel) return showToast('error', 'Veuillez sélectionner un client');
     setBusy(true);
     try {
-      await createFacture({ client_id: clientSel.id, lignes, ...dates });
+      await createFacture({ 
+        client_id: clientSel.id, lignes, ...dates,
+        tva: parseFloat(tva), numero_facture: numeroFacture, statut: statutFacture, date_paiement: datePaiement 
+      });
       showToast('success', '✅ Facture créée avec succès');
       setShowModal(false);
       setClientSel(null);
       setLignes([{ description:'', quantite:1, prix_unitaire:'' }]);
       setDates({ date_echeance:'', periode_debut:'', periode_fin:'' });
+      setTva(19); setNumeroFacture(''); setStatutFacture('impayee'); setDatePaiement('');
       charger();
     } catch (err) {
       showToast('error', err.response?.data?.message || 'Erreur création');
@@ -276,7 +287,8 @@ export default function Factures() {
   };
 
   return (
-    <div className="animate-page" style={{ padding:'32px 32px 48px', maxWidth:1400, margin:'0 auto' }}>
+    <Layout>
+      <div className="animate-page" style={{ padding:'32px 32px 48px', maxWidth:1400, margin:'0 auto' }}>
 
       {/* Toast */}
       {toast && (
@@ -434,9 +446,38 @@ export default function Factures() {
                 {clientSel && <div style={{ marginTop:10 }}><ClientCard client={clientSel} /></div>}
               </div>
 
+              {/* Section infos facture additonnelles */}
+              <div style={{ marginBottom:24 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#718096', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10 }}>⚙️ Infos Facture</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:600, color:'#4A5568', display:'block', marginBottom:5 }}>N° Facture (Auto si vide)</label>
+                    <input value={numeroFacture} onChange={e => setNumeroFacture(e.target.value)} placeholder="FAC-YYYY-XXXX"
+                      style={{ width:'100%', padding:'10px 12px', border:'1px solid var(--at-border)', borderRadius:10, fontSize:13, outline:'none', background:'#FAFBFC', boxSizing:'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:600, color:'#4A5568', display:'block', marginBottom:5 }}>Statut *</label>
+                    <select value={statutFacture} onChange={e => setStatutFacture(e.target.value)}
+                      style={{ width:'100%', padding:'10px 12px', border:'1px solid var(--at-border)', borderRadius:10, fontSize:13, outline:'none', background:'#FAFBFC', boxSizing:'border-box' }}>
+                      <option value="impayee">Impayée</option>
+                      <option value="payee">Payée</option>
+                      <option value="en_retard">En retard</option>
+                      <option value="annulee">Annulée</option>
+                    </select>
+                  </div>
+                  {statutFacture === 'payee' && (
+                    <div>
+                      <label style={{ fontSize:11, fontWeight:600, color:'#4A5568', display:'block', marginBottom:5 }}>Date de paiement</label>
+                      <input type="datetime-local" value={datePaiement} onChange={e => setDatePaiement(e.target.value)}
+                        style={{ width:'100%', padding:'10px 12px', border:'1px solid var(--at-border)', borderRadius:10, fontSize:13, outline:'none', background:'#FAFBFC', boxSizing:'border-box' }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Section dates */}
               <div style={{ marginBottom:24 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:'#718096', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10 }}>📅 Dates</div>
+                <div style={{ fontSize:11, fontWeight:700, color:'#718096', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10 }}>📅 Dates Période</div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
                   {[['date_echeance',"Date d'échéance"],['periode_debut','Période début'],['periode_fin','Période fin']].map(([k,l]) => (
                     <div key={k}>
@@ -452,7 +493,7 @@ export default function Factures() {
               <div style={{ marginBottom:24 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
                   <div style={{ fontSize:11, fontWeight:700, color:'#718096', textTransform:'uppercase', letterSpacing:'0.5px' }}>📋 Lignes de facturation *</div>
-                  <button type="button" onClick={addLigne} style={{ ...btnSm('#3B82F6'), padding:'6px 14px', fontSize:12 }}>+ Ajouter</button>
+                  <button type="button" onClick={addLigne} style={{ ...btnSm('#3B82F6'), padding:'6px 14px', fontSize:12 }}>+ Ajouter Ligne</button>
                 </div>
                 <div style={{ background:'#F8FAFB', borderRadius:12, padding:16 }}>
                   <div style={{ display:'grid', gridTemplateColumns:'3fr 80px 120px 36px', gap:8, marginBottom:8 }}>
@@ -479,15 +520,22 @@ export default function Factures() {
               </div>
 
               {/* Totaux */}
-              <div style={{ background:'#006837', borderRadius:14, padding:'18px 22px', marginBottom:24, color:'white' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6, fontSize:13, opacity:0.8 }}>
-                  <span>Montant HT</span><span>{ht.toFixed(2)} DZD</span>
+              <div style={{ background:'#006837', borderRadius:14, padding:'18px 22px', marginBottom:24, color:'white', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems: 'center', fontSize:13, opacity:0.9 }}>
+                  <span>Montant HT (Auto)</span>
+                  <input type="text" readOnly value={`${ht.toFixed(2)} DZD`} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', textAlign: 'right', padding: '6px 10px', borderRadius: 6, width: 120, outline: 'none' }} />
                 </div>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12, fontSize:13, opacity:0.8 }}>
-                  <span>TVA (19%)</span><span>{(ttc-ht).toFixed(2)} DZD</span>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems: 'center', fontSize:13, opacity:0.9 }}>
+                  <span>Taux TVA (%)</span>
+                  <input type="number" step="0.1" value={tva} onChange={e => setTva(e.target.value)} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', textAlign: 'right', padding: '6px 10px', borderRadius: 6, width: 80, outline: 'none', fontWeight: 600 }} />
                 </div>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:20, fontWeight:800, borderTop:'1px solid rgba(255,255,255,0.25)', paddingTop:12 }}>
-                  <span>Total TTC</span><span>{ttc.toFixed(2)} DZD</span>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems: 'center', fontSize:13, opacity:0.9 }}>
+                  <span>Montant TVA</span>
+                  <input type="text" readOnly value={`${((parseFloat(tva)||0)*ht/100).toFixed(2)} DZD`} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', textAlign: 'right', padding: '6px 10px', borderRadius: 6, width: 120, outline: 'none' }} />
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems: 'center', fontSize:20, fontWeight:800, borderTop:'1px solid rgba(255,255,255,0.25)', paddingTop:12 }}>
+                  <span>Total TTC</span>
+                  <input type="text" readOnly value={`${ttc.toFixed(2)} DZD`} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', textAlign: 'right', padding: '8px 12px', borderRadius: 8, width: 160, outline: 'none', fontSize: 18, fontWeight: 800 }} />
                 </div>
               </div>
 
@@ -550,9 +598,10 @@ export default function Factures() {
               )}
             </div>
           </div>
-        </div>
+         </div>
       )}
-    </div>
+      </div>
+    </Layout>
   );
 }
 

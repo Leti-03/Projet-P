@@ -109,6 +109,12 @@ export default function Parametres() {
   }, [user]);
 
   useEffect(() => {
+    if (activeTab === 'systeme' && !user?.est_superadmin) {
+      setActiveTab('profil');
+    }
+  }, [activeTab, user]);
+
+  useEffect(() => {
     api.get('/health')
       .then(({ data }) => setSysInfo(data))
       .catch(() => setSysInfo({ status: 'Inconnu', timestamp: null }))
@@ -163,7 +169,7 @@ export default function Parametres() {
   const tabs = [
     { id: 'profil',  icon: <IconUser />,   label: 'Mon profil' },
     { id: 'securite', icon: <IconLock />,  label: 'Sécurité' },
-    { id: 'systeme',  icon: <IconServer />, label: 'Système' },
+    ...(user?.est_superadmin ? [{ id: 'systeme',  icon: <IconServer />, label: 'Système' }] : []),
   ];
 
   return (
@@ -190,7 +196,15 @@ export default function Parametres() {
               <p style={s.subtitle}>{user?.prenom} {user?.nom} · {user?.email}</p>
             </div>
           </div>
-          {user?.est_superadmin && <span style={s.superBadge}>⚡ Super Admin</span>}
+          <div>
+            {user?.est_superadmin ? (
+              <span style={s.superBadge}>⚡ Super Admin</span>
+            ) : (
+              <span style={{ ...s.superBadge, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                {user?.roles?.[0]?.nom || 'Non assigné'}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* ── Tabs ── */}
@@ -224,6 +238,10 @@ export default function Parametres() {
                 </div>
                 <Field label="Email" value={profil.email} disabled hint="L'adresse email ne peut pas être modifiée" />
                 <Field label="Téléphone" value={profil.telephone} onChange={e => setProfil({ ...profil, telephone: e.target.value })} placeholder="0555 XX XX XX" />
+                <div style={s.row}>
+                  <Field label="Rôle" value={user?.roles?.[0]?.nom || 'Non assigné'} disabled />
+                  <Field label="Statut" value={user?.est_actif ? 'Actif' : 'Inactif'} disabled />
+                </div>
                 <div style={s.formFooter}>
                   <button type="submit" disabled={profilLoading} className="save-btn" style={{ ...s.btnPrimary, transition: 'all 0.2s' }}>
                     {profilLoading ? '⏳ Enregistrement...' : '✓ Enregistrer les modifications'}
@@ -236,6 +254,9 @@ export default function Parametres() {
           {/* SÉCURITÉ */}
           {activeTab === 'securite' && (
             <Section icon={<IconLock />} title="Changer le mot de passe" subtitle="Utilisez un mot de passe fort et unique" accent="#6366f1">
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', padding: '14px 16px', borderRadius: 10, marginBottom: 20, fontSize: 13, fontWeight: 600 }}>
+                Pour la sécurité de votre compte, utilisez un mot de passe unique que vous n'utilisez nulle part ailleurs.
+              </div>
               <form onSubmit={handleSaveMdp} style={s.form}>
                 <Field
                   label="Mot de passe actuel"
