@@ -1,19 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+// src/context/crm/PermissionContext.jsx
+import React, { createContext, useContext } from 'react';
 import { useAuth } from './AuthContext';
+
 const PermissionContext = createContext();
 
 export const PermissionProvider = ({ children }) => {
-  const { user, hasPermission: hasAuthPermission } = useAuth();   // ← Ça marche maintenant
-
-  const [permissions, setPermissions] = useState([]);
-
-  useEffect(() => {
-    if (user) {
-      setPermissions(user.permissions || []);
-    } else {
-      setPermissions([]);
-    }
-  }, [user]);
+  const { user, hasPermission: hasAuthPermission } = useAuth();
 
   const hasPermission = (ressource, action) => {
     if (!user) return false;
@@ -22,7 +14,7 @@ export const PermissionProvider = ({ children }) => {
   };
 
   return (
-    <PermissionContext.Provider value={{ permissions, hasPermission }}>
+    <PermissionContext.Provider value={{ hasPermission }}>
       {children}
     </PermissionContext.Provider>
   );
@@ -31,7 +23,7 @@ export const PermissionProvider = ({ children }) => {
 export const usePermission = () => {
   const context = useContext(PermissionContext);
   if (!context) {
-    throw new Error('usePermission doit être utilisé à l’intérieur de PermissionProvider');
+    throw new Error("usePermission doit être utilisé à l'intérieur de PermissionProvider");
   }
   return context;
 };

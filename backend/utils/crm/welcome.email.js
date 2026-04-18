@@ -11,7 +11,7 @@ export const welcomeEmail = ({ prenom, nom, email, password, role }) => {
         <div style="background-color: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 20px; margin: 20px 0;">
           <p style="margin: 0 0 10px 0;"><strong>Vos informations de connexion :</strong></p>
           <p style="margin: 5px 0;">📧 Email : <strong>${email}</strong></p>
-          <p style="margin: 5px 0;">🔑 Mot de passe temporaire : <strong style="font-size: 18px; color: #006837; letter-spacing: 2px;">${password}</strong></p>
+          <p style="margin: 5px 0;">🔑 Mot de passe : <strong style="font-size: 18px; color: #006837; letter-spacing: 2px;">${password}</strong></p>
           <p style="margin: 5px 0;">👤 Rôle assigné : <strong>${role}</strong></p>
         </div>
         <a href="${process.env.CRM_URL || 'http://localhost:3000'}"

@@ -167,7 +167,7 @@ export const searchClients = async (req, res) => {
     const { data, error } = await supabase
       .from('clients')
       .select('id, nom, prenom, email, telephone, adresse, ville, wilaya, commune, daira, code_client, numero_compte_at, nom_entreprise, categorie, actif, statut_compte')
-      .or(`nom.ilike.%${q}%,prenom.ilike.%${q}%,email.ilike.%${q}%,telephone.ilike.%${q}%,ville.ilike.%${q}%,wilaya.ilike.%${q}%,code_client.ilike.%${q}%,nom_entreprise.ilike.%${q}%`)
+      .or(`nom.ilike.%${q}%,prenom.ilike.%${q}%,email.ilike.%${q}%,telephone.ilike.%${q}%,ville.ilike.%${q}%,wilaya.ilike.%${q}%,code_client.ilike.%${q}%,nom_entreprise.ilike.%${q}%,numero_compte_at.ilike.%${q}%`)
       .eq('actif', true)
       .limit(10);
 
@@ -224,30 +224,34 @@ export const getFactureById = async (req, res) => {
 // ─── POST /api/crm/factures ───────────────────────────────────────────────
 export const createFacture = async (req, res) => {
   try {
-    const { client_id, lignes, date_echeance, periode_debut, periode_fin } = req.body;
+    const { client_id, lignes, date_echeance, periode_debut, periode_fin, tva: inputTva, numero_facture: inputNum, statut, date_paiement } = req.body;
     if (!client_id || !lignes?.length)
       return res.status(400).json({ message: 'client_id et lignes sont requis' });
 
     const montant_ht = lignes.reduce((s, l) => s + parseFloat(l.prix_unitaire) * parseFloat(l.quantite), 0);
-    const tva = 19;
+    const tva = inputTva !== undefined ? parseFloat(inputTva) : 19;
     const montant_ttc = montant_ht * (1 + tva / 100);
+    const statutReel = statut || 'impayee';
+    const dp = statutReel === 'payee' ? (date_paiement || new Date().toISOString()) : null;
 
     const { data: facture, error: fErr } = await supabase
       .from('factures')
       .insert({
         client_id,
-        numero_facture: genNumeroFacture(),
+        numero_facture: inputNum || genNumeroFacture(),
         montant_ht: parseFloat(montant_ht.toFixed(2)),
-        tva, montant_ttc: parseFloat(montant_ttc.toFixed(2)),
+        tva,
+        montant_ttc: parseFloat(montant_ttc.toFixed(2)),
         date_echeance: date_echeance || null,
         periode_debut: periode_debut || null,
         periode_fin: periode_fin || null,
-        statut: 'impayee',
+        statut: statutReel,
+        date_paiement: dp,
       })
       .select().single();
     if (fErr) throw fErr;
 
-    await supabase.from('facture_lignes').insert(
+    const { data: insertedLignes, error: lErr } = await supabase.from('facture_lignes').insert(
       lignes.map(l => ({
         facture_id: facture.id,
         description: l.description,
@@ -255,17 +259,22 @@ export const createFacture = async (req, res) => {
         prix_unitaire: parseFloat(l.prix_unitaire),
         montant: parseFloat(l.prix_unitaire) * parseFloat(l.quantite),
       }))
-    );
+    ).select();
+
+    if (lErr) {
+      await supabase.from('factures').delete().eq('id', facture.id);
+      throw lErr;
+    }
 
     await supabase.from('logs_activite').insert({
       utilisateur_id: req.user.id, action: 'CREATE', ressource: 'factures',
       ressource_id: facture.id, details: { numero: facture.numero_facture }, ip_address: req.ip,
     });
 
-    return res.status(201).json({ message: 'Facture créée', facture });
+    return res.status(201).json({ message: 'Facture créée', facture: { ...facture, facture_lignes: insertedLignes } });
   } catch (err) {
     console.error('createFacture:', err);
-    return res.status(500).json({ message: 'Erreur serveur' });
+    return res.status(500).json({ message: err?.message || err?.details || 'Erreur serveur', dbError: err });
   }
 };
 
